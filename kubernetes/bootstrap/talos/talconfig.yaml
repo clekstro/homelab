@@ -1,0 +1,96 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/budimanjojo/talhelper/master/pkg/config/schemas/talconfig.json
+---
+# renovate: datasource=docker depName=ghcr.io/siderolabs/installer
+talosVersion: v1.7.5
+# renovate: datasource=docker depName=ghcr.io/siderolabs/kubelet
+kubernetesVersion: v1.30.3
+
+clusterName: "talos-proxmox-cluster"
+endpoint: https://10.0.80.196:6443
+clusterPodNets:
+  - "10.69.0.0/16"
+clusterSvcNets:
+  - "10.96.0.0/16"
+additionalApiServerCertSans: &sans
+  - "10.0.80.196"
+  - 127.0.0.1 # KubePrism
+additionalMachineCertSans: *sans
+
+# Disable built-in Flannel to use Cilium
+cniConfig:
+  name: none
+
+nodes:
+  - hostname: "talos-ctl-1"
+    ipAddress: "10.0.80.38"
+    installDisk: "/dev/sda"
+    talosImageURL: factory.talos.dev/installer/e9bf82d988379794152146378e02b097fe5469b20ec8eda14cfb875a9d7eacb7
+    controlPlane: true
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "bc:24:11:16:66:ee"
+        vlans:
+          - vlanId: 80
+            addresses:
+              - "10.0.80.38/24"
+            mtu: 1500
+            routes:
+              - network: 0.0.0.0/0
+                gateway: "10.0.80.1"
+            vip:
+              ip: "10.0.80.196"
+  - hostname: "talos-ctl-2"
+    ipAddress: "10.0.80.190"
+    installDisk: "/dev/sda"
+    talosImageURL: factory.talos.dev/installer/e9bf82d988379794152146378e02b097fe5469b20ec8eda14cfb875a9d7eacb7
+    controlPlane: true
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "bc:24:11:43:2b:a8"
+        vlans:
+          - vlanId: 80
+            addresses:
+              - "10.0.80.190/24"
+            mtu: 1500
+            routes:
+              - network: 0.0.0.0/0
+                gateway: "10.0.80.1"
+            vip:
+              ip: "10.0.80.196"
+  - hostname: "talos-ctl-3"
+    ipAddress: "10.0.80.253"
+    installDisk: "/dev/sda"
+    talosImageURL: factory.talos.dev/installer/e9bf82d988379794152146378e02b097fe5469b20ec8eda14cfb875a9d7eacb7
+    controlPlane: true
+    networkInterfaces:
+      - deviceSelector:
+          hardwareAddr: "bc:24:11:43:2b:a8"
+        vlans:
+          - vlanId: 80
+            addresses:
+              - "10.0.80.253/24"
+            mtu: 1500
+            routes:
+              - network: 0.0.0.0/0
+                gateway: "10.0.80.1"
+            vip:
+              ip: "10.0.80.196"
+
+# Global patches
+patches:
+  - "@./patches/global/cluster-discovery.yaml"
+  - "@./patches/global/containerd.yaml"
+  - "@./patches/global/disable-search-domain.yaml"
+  - "@./patches/global/hostdns.yaml"
+  - "@./patches/global/kubelet.yaml"
+  - "@./patches/global/openebs-local.yaml"
+  - "@./patches/global/sysctl.yaml"
+
+# Controller patches
+controlPlane:
+  patches:
+    - "@./patches/controller/api-access.yaml"
+    - "@./patches/controller/cluster.yaml"
+    - "@./patches/controller/disable-admission-controller.yaml"
+    - "@./patches/controller/etcd.yaml"
+
